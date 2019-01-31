@@ -81,6 +81,19 @@ def in_depth_print(top_level_generator):
                 in_depth_print(item[2])
             print(item[0], item[1])
 
+def link_tree_to_csv(tree_of_links, parent_prefix = ''):
+    csv_chunk = ''
+    for name, url, *maybe_tree in tree_of_links:
+        if parent_prefix:
+            new_prefix = f'{parent_prefix},{name}'
+        else:
+            new_prefix = name
+        csv_chunk += f'{new_prefix},{url}\n'
+        if maybe_tree:
+            csv_chunk += link_tree_to_csv(maybe_tree[0], parent_prefix = new_prefix)
+    return csv_chunk
+
+
 if __name__=="__main__":
     blep = tree_of_links("https://es.wikipedia.org/wiki/Wikipedia:Portada",
     2,
