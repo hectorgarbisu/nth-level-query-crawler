@@ -74,36 +74,39 @@ def tree_of_links(url = '', numlevels=1, queries=['a[href]']):
                 )
         for link_text, link_url in tuples)
 
-def in_depth_print(top_level_generator):
-    if top_level_generator:
-        for item in top_level_generator:
-            if len(item)>2:
-                in_depth_print(item[2])
-            print(item[0], item[1])
+def in_depth_print(tree_of_links):
+    if tree_of_links:
+        for name, url, *subtree in tree_of_links:
+            if subtree:
+                in_depth_print(subtree)
+            print(name, url)
 
 def link_tree_to_csv(tree_of_links, parent_prefix = ''):
-    csv_chunk = ''
-    for name, url, *maybe_tree in tree_of_links:
+    for name, url, *subtree in tree_of_links:
         if parent_prefix:
             new_prefix = f'{parent_prefix},{name}'
         else:
             new_prefix = name
-        csv_chunk += f'{new_prefix},{url}\n'
-        if maybe_tree:
-            csv_chunk += link_tree_to_csv(maybe_tree[0], parent_prefix = new_prefix)
-    return csv_chunk
+        yield f'{new_prefix},{url}'
+        if subtree:
+            yield from link_tree_to_csv(subtree[0], parent_prefix = new_prefix)
+
+def test():
+    link_tree = tree_of_links("https://es.wikipedia.org/wiki/Wikipedia:Portada",
+    2,
+    [
+        'div.main-wrapper a[href]',
+        'div#bodyContent a[href]',
+    ])
+
+    in_depth_print(link_tree)
+    
+    for csv_line in link_tree_to_csv(link_tree):
+        print(csv_line)
 
 
 if __name__=="__main__":
-    blep = tree_of_links("https://es.wikipedia.org/wiki/Wikipedia:Portada",
-    2,
-    [
-        'div[class="main-wrapper"] a[href]',
-        'div[class="main-wrapper"] a[href]',
-    ])
-    
-    in_depth_print(blep)
-        
+    test()
 
 
 
