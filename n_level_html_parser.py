@@ -41,7 +41,7 @@ the default query for all levels is a["href"] (all links)
 """
 
 
-def tree_of_links(url = '', numlevels=1, queries=['a[href]']):
+def tree_of_links(url = '', numlevels=1, queries=['a[href]'], filter=lambda x: True):
     parsed_uri = urlparse(url)
     base_url = '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_uri)
 
@@ -63,16 +63,17 @@ def tree_of_links(url = '', numlevels=1, queries=['a[href]']):
     
     """ [(link_text, link_url), ...] """
     tuples = ((anchor.text, urljoin(base_url, anchor['href']) ) for anchor in findings)
-
     if numlevels<2 :
         return tuples
     else:
         return ((
                     link_text,
                     link_url, 
-                    tree_of_links(link_url, numlevels - 1, remaining_queries)
+                    tree_of_links(link_url, numlevels - 1, remaining_queries, filter)
                 )
-        for link_text, link_url in tuples)
+        for link_text, link_url in tuples if filter(link_url))
+
+
 
 def in_depth_print(tree_of_links):
     if tree_of_links:
@@ -91,6 +92,19 @@ def link_tree_to_csv(tree_of_links, parent_prefix = ''):
         if subtree:
             yield from link_tree_to_csv(subtree[0], parent_prefix = new_prefix)
 
+#Slow as fuck
+def unique_urls(tree_of_links,  visited_links = set()):
+    subtrees = []
+    for _, url, *subtree in tree_of_links:
+        print(f'checking {url}')
+        if subtree and url not in visited_links:
+            subtrees.append(subtree)
+        visited_links.add(url)
+        yield url
+        print(len(visited_links))
+    for subtree in subtrees:
+        yield from unique_urls(subtree[0], visited_links)
+
 def test():
     link_tree = tree_of_links("https://es.wikipedia.org/wiki/Wikipedia:Portada",
     2,
@@ -104,9 +118,21 @@ def test():
     for csv_line in link_tree_to_csv(link_tree):
         print(csv_line)
 
+def test_unique():
+    
+    def within_support(url):
+        return url.startswith('https://support.google.com/a/')
+
+    link_tree = tree_of_links('https://support.google.com/a#topic=7570177', 400, filter=within_support)
+    #in_depth_print(link_tree)
+    
+    with open('urls.txt', 'a+') as file:
+        for url in unique_urls(link_tree, set()):
+            file.write(f'{url}\n')
+
 
 if __name__=="__main__":
-    test()
+    test_unique()
 
 
 
